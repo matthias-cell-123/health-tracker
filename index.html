@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Suivi Sante</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <style>
+        :root {
+            --bg: #0f0f1a;
+            --card: #1a1a2e;
+            --card-hover: #22223a;
+            --accent: #4fc3f7;
+            --text: #e0e0e0;
+            --text-dim: #888;
+            --danger: #ef5350;
+            --success: #66bb6a;
+            --warning: #ffa726;
+            --border: #2a2a40;
+            --radius: 14px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg); color: var(--text);
+            min-height: 100vh; min-height: 100dvh;
+            padding-bottom: 80px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 20px 16px 16px;
+            position: sticky; top: 0; z-index: 100;
+            border-bottom: 1px solid var(--border);
+        }
+        .header h1 { font-size: 1.3rem; font-weight: 700; margin-bottom: 12px; }
+        .date-nav { display: flex; align-items: center; gap: 8px; justify-content: center; }
+        .date-nav button {
+            background: var(--card); border: 1px solid var(--border); color: var(--text);
+            width: 36px; height: 36px; border-radius: 50%; font-size: 1.1rem;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .date-nav button:active { transform: scale(0.95); }
+        .date-display {
+            font-size: 0.95rem; font-weight: 600; min-width: 200px; text-align: center;
+            cursor: pointer; padding: 6px 12px; border-radius: 8px;
+        }
+        .date-display:hover { background: var(--card); }
+        .today-badge {
+            font-size: 0.65rem; background: var(--accent); color: #000;
+            padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: 700;
+        }
+
+        .score-bar {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; background: var(--card);
+            margin: 12px 12px 0; border-radius: var(--radius);
+        }
+        .score-ring { width: 56px; height: 56px; flex-shrink: 0; }
+        .score-ring svg { transform: rotate(-90deg); }
+        .score-ring .bg { stroke: var(--border); }
+        .score-ring .fill { transition: stroke-dashoffset 0.6s ease; }
+        .score-info { flex: 1; }
+        .score-info .pct { font-size: 1.5rem; font-weight: 800; }
+        .score-info .label { font-size: 0.8rem; color: var(--text-dim); }
+        .streak-badge {
+            background: linear-gradient(135deg, #ff6f00, #ff8f00); color: #fff;
+            padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; white-space: nowrap;
+        }
+
+        .habits-container { padding: 12px; }
+        .category-label {
+            font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1px; color: var(--accent); margin: 16px 0 8px 4px;
+        }
+        .category-label:first-child { margin-top: 4px; }
+
+        .habit-card {
+            display: flex; align-items: center; gap: 12px; padding: 14px;
+            background: var(--card); border-radius: var(--radius); margin-bottom: 6px;
+            cursor: pointer; transition: all 0.15s; border: 2px solid transparent;
+            user-select: none; -webkit-user-select: none;
+        }
+        .habit-card:active { transform: scale(0.98); }
+        .habit-card.checked { border-color: var(--success); background: rgba(102,187,106,0.08); }
+        .habit-emoji { font-size: 1.3rem; flex-shrink: 0; }
+        .habit-text { flex: 1; font-size: 0.85rem; font-weight: 500; line-height: 1.3; }
+        .habit-check {
+            width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; transition: all 0.2s; font-size: 0.85rem;
+        }
+        .habit-card.checked .habit-check { background: var(--success); border-color: var(--success); color: #fff; }
+
+        .calories-card {
+            display: flex; align-items: center; gap: 12px; padding: 14px;
+            background: var(--card); border-radius: var(--radius); margin-bottom: 6px;
+        }
+        .calories-input {
+            background: var(--bg); border: 1px solid var(--border); color: var(--text);
+            padding: 8px 12px; border-radius: 8px; font-size: 1rem; width: 100px;
+            text-align: center; font-weight: 600;
+        }
+        .calories-input:focus { outline: none; border-color: var(--accent); }
+        .calories-unit { font-size: 0.8rem; color: var(--text-dim); }
+
+        .notes-card {
+            padding: 14px; background: var(--card); border-radius: var(--radius); margin-top: 12px;
+        }
+        .notes-card label { font-size: 0.8rem; color: var(--text-dim); display: block; margin-bottom: 8px; }
+        .notes-textarea {
+            width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+            padding: 10px; border-radius: 8px; font-size: 0.85rem; font-family: inherit;
+            resize: vertical; min-height: 60px;
+        }
+        .notes-textarea:focus { outline: none; border-color: var(--accent); }
+
+        /* History */
+        .history-container { padding: 12px; }
+        .calendar { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .cal-header h3 { font-size: 1rem; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .cal-day-name { text-align: center; font-size: 0.65rem; color: var(--text-dim); font-weight: 600; padding: 4px 0; }
+        .cal-day {
+            aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;
+        }
+        .cal-day.today { outline: 2px solid var(--accent); }
+        .cal-day.empty { cursor: default; }
+        .cal-day.s0 { color: var(--text-dim); }
+        .cal-day.s1 { background: rgba(239,83,80,0.3); }
+        .cal-day.s2 { background: rgba(255,167,38,0.3); }
+        .cal-day.s3 { background: rgba(255,167,38,0.5); }
+        .cal-day.s4 { background: rgba(102,187,106,0.4); }
+        .cal-day.s5 { background: rgba(102,187,106,0.7); color: #fff; }
+
+        .legend {
+            display: flex; justify-content: center; gap: 6px; margin-top: 8px;
+            font-size: 0.6rem; color: var(--text-dim); flex-wrap: wrap;
+        }
+        .legend-item { display: flex; align-items: center; gap: 3px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+        /* Stats */
+        .stats-container { padding: 12px; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .stat-card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 8px; }
+        .stat-card h3 { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 6px; }
+        .stat-value { font-size: 1.8rem; font-weight: 800; }
+        .habit-stat {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.78rem;
+        }
+        .habit-stat:last-child { border-bottom: none; }
+        .habit-stat-bar { width: 50px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+        .habit-stat-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
+        /* Bottom nav */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--card); border-top: 1px solid var(--border);
+            display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+        .nav-item {
+            flex: 1; padding: 10px 0 8px; text-align: center; cursor: pointer;
+            color: var(--text-dim); border: none; background: none; font-family: inherit;
+        }
+        .nav-item.active { color: var(--accent); }
+        .nav-item .nav-icon { font-size: 1.2rem; }
+        .nav-item .nav-label { font-size: 0.6rem; font-weight: 600; margin-top: 2px; }
+
+        /* Install prompt */
+        .install-prompt {
+            display: none; position: fixed; bottom: 70px; left: 12px; right: 12px;
+            background: linear-gradient(135deg, #16213e, #1a1a2e);
+            border: 1px solid var(--accent); border-radius: var(--radius); padding: 16px;
+            z-index: 150; text-align: center;
+        }
+        .install-prompt.show { display: block; }
+        .install-prompt h3 { font-size: 0.95rem; margin-bottom: 8px; }
+        .install-prompt p { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 12px; }
+        .install-btn {
+            background: var(--accent); color: #000; border: none; padding: 10px 24px;
+            border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; margin-right: 8px;
+        }
+        .dismiss-btn {
+            background: transparent; color: var(--text-dim); border: 1px solid var(--border);
+            padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; cursor: pointer;
+        }
+
+        @keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.2)} 100%{transform:scale(1)} }
+        .pop { animation: pop 0.25s ease; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>&#x1F3AF; Suivi Sante</h1>
+        <div class="date-nav">
+            <button onclick="changeDate(-1)">&#x2190;</button>
+            <div class="date-display" id="dateDisplay" onclick="goToToday()"></div>
+            <button onclick="changeDate(1)">&#x2192;</button>
+        </div>
+    </div>
+
+    <div id="page-checklist">
+        <div class="score-bar">
+            <div class="score-ring">
+                <svg viewBox="0 0 40 40">
+                    <circle class="bg" cx="20" cy="20" r="16" fill="none" stroke-width="3.5"/>
+                    <circle class="fill" id="scoreCircle" cx="20" cy="20" r="16" fill="none" stroke-width="3.5"
+                        stroke="var(--accent)" stroke-linecap="round"
+                        stroke-dasharray="100.53" stroke-dashoffset="100.53"/>
+                </svg>
+            </div>
+            <div class="score-info">
+                <div class="pct" id="scorePct">0%</div>
+                <div class="label" id="scoreLabel">0 / 15 actions</div>
+            </div>
+            <div class="streak-badge" id="streakBadge" style="display:none"></div>
+        </div>
+        <div class="habits-container" id="habitsList"></div>
+    </div>
+
+    <div id="page-history" style="display:none">
+        <div class="history-container" id="historyContainer"></div>
+    </div>
+
+    <div id="page-stats" style="display:none">
+        <div class="stats-container" id="statsContainer"></div>
+    </div>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="showPage('checklist')">
+            <div class="nav-icon">&#x2705;</div>
+            <div class="nav-label">Aujourd'hui</div>
+        </button>
+        <button class="nav-item" onclick="showPage('history')">
+            <div class="nav-icon">&#x1F4C5;</div>
+            <div class="nav-label">Historique</div>
+        </button>
+        <button class="nav-item" onclick="showPage('stats')">
+            <div class="nav-icon">&#x1F4CA;</div>
+            <div class="nav-label">Stats</div>
+        </button>
+    </nav>
+
+    <div class="install-prompt" id="installPrompt">
+        <h3>&#x1F4F2; Installer l'app</h3>
+        <p>Ajoute Suivi Sante sur ton ecran d'accueil pour y acceder rapidement</p>
+        <button class="install-btn" id="installBtn">Installer</button>
+        <button class="dismiss-btn" onclick="dismissInstall()">Plus tard</button>
+    </div>
+
+<script>
+// ===== HABITS =====
+const HABITS = [
+    { id: 'olive_oil',      emoji: '\u{1F9C8}', text: "Huile d'olive pour cuisiner",           cat: 'Nutrition' },
+    { id: 'cereals',        emoji: '\u{1F33E}', text: 'Cereales completes / legumineuses',     cat: 'Nutrition' },
+    { id: 'fish',           emoji: '\u{1F41F}', text: 'Repas poisson gras',                    cat: 'Nutrition' },
+    { id: 'water',          emoji: '\u{1F4A7}', text: 'Eau en priorite (pas de sodas)',        cat: 'Nutrition' },
+    { id: 'psyllium',       emoji: '\u{1F95B}', text: 'Psyllium avant dejeuner',               cat: 'Nutrition' },
+    { id: 'walk_lunch',     emoji: '\u{1F6B6}', text: 'Marche apres dejeuner (30 min)',        cat: 'Activite' },
+    { id: 'walk_dinner',    emoji: '\u{1F30C}', text: 'Marche apres diner (10 min)',           cat: 'Activite' },
+    { id: 'mini_circuit',   emoji: '\u{1F4AA}', text: 'Mini-circuit renforcement',             cat: 'Activite' },
+    { id: 'walk_breaks',    emoji: '\u{1F9CD}', text: 'Pauses marche regulieres',              cat: 'Activite' },
+    { id: 'morning_out',    emoji: '\u2600\uFE0F',  text: 'Boisson du matin dehors',              cat: 'Environnement' },
+    { id: 'dim_lights',     emoji: '\u{1F311}', text: 'Tamiser lumieres & couper ecrans le soir', cat: 'Sommeil' },
+    { id: 'sleep',          emoji: '\u{1F634}', text: 'Sommeil 7-8h',                          cat: 'Sommeil' },
+    { id: 'breathing',      emoji: '\u{1F9D8}', text: 'Respiration abdominale (midi & soir)',  cat: 'Mental' },
+    { id: 'd3k2',           emoji: '\u{1F48A}', text: 'D3-K2 au diner',                       cat: 'Supplements' },
+];
+
+const TOTAL = HABITS.length + 1; // +1 for calories
+
+// ===== STATE =====
+let currentDate = todayStr();
+let data = loadAll();
+
+function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDate(s) {
+    const d = new Date(s + 'T12:00:00');
+    const days = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+    const months = ['jan','fev','mar','avr','mai','juin','juil','aout','sep','oct','nov','dec'];
+    return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function addDays(s, n) {
+    const d = new Date(s + 'T12:00:00');
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function loadAll() {
+    try { return JSON.parse(localStorage.getItem('ht_data') || '{}'); } catch { return {}; }
+}
+
+function save() { localStorage.setItem('ht_data', JSON.stringify(data)); }
+
+function day(s) {
+    if (!data[s]) data[s] = { h: {}, cal: '', notes: '' };
+    return data[s];
+}
+
+function score(s) {
+    const d = day(s);
+    let c = 0;
+    HABITS.forEach(h => { if (d.h[h.id]) c++; });
+    if (d.cal && parseInt(d.cal) > 0) c++;
+    return c;
+}
+
+function pct(s) { return Math.round((score(s) / TOTAL) * 100); }
+
+// ===== RENDER =====
+function render() {
+    // Date
+    const el = document.getElementById('dateDisplay');
+    const isToday = currentDate === todayStr();
+    el.innerHTML = formatDate(currentDate) + (isToday ? '<span class="today-badge">AUJOURD\'HUI</span>' : '');
+
+    // Score ring
+    const p = pct(currentDate);
+    const circ = 2 * Math.PI * 16;
+    const circle = document.getElementById('scoreCircle');
+    circle.style.strokeDashoffset = circ - (circ * p / 100);
+    circle.style.stroke = p >= 80 ? 'var(--success)' : p >= 50 ? 'var(--warning)' : p > 0 ? 'var(--danger)' : 'var(--accent)';
+    document.getElementById('scorePct').textContent = p + '%';
+    document.getElementById('scoreLabel').textContent = `${score(currentDate)} / ${TOTAL} actions`;
+
+    // Streak
+    let streak = 0, d = todayStr();
+    while (pct(d) >= 60) { streak++; d = addDays(d, -1); }
+    const badge = document.getElementById('streakBadge');
+    if (streak > 0) { badge.style.display = 'block'; badge.textContent = '\u{1F525} ' + streak + 'j'; }
+    else { badge.style.display = 'none'; }
+
+    // Habits
+    renderHabits();
+}
+
+function renderHabits() {
+    const container = document.getElementById('habitsList');
+    const dd = day(currentDate);
+    let html = '', lastCat = '';
+    const catEmoji = { 'Nutrition':'\u{1F957}', 'Activite':'\u{1F3C3}', 'Environnement':'\u{1F33F}', 'Sommeil':'\u{1F319}', 'Mental':'\u{1F9E0}', 'Supplements':'\u{1F48A}' };
+
+    HABITS.forEach(h => {
+        if (h.cat !== lastCat) {
+            lastCat = h.cat;
+            html += `<div class="category-label">${catEmoji[h.cat]||''} ${h.cat}</div>`;
+        }
+        const ck = dd.h[h.id] ? 'checked' : '';
+        html += `<div class="habit-card ${ck}" onclick="toggle('${h.id}',this)">
+            <span class="habit-emoji">${h.emoji}</span>
+            <span class="habit-text">${h.text}</span>
+            <span class="habit-check">${dd.h[h.id] ? '\u2714' : ''}</span>
+        </div>`;
+    });
+
+    html += `<div class="category-label">\u{1F4CA} Tracking</div>
+        <div class="calories-card">
+            <span class="habit-emoji">\u{1F525}</span>
+            <span class="habit-text">Calories</span>
+            <input type="number" class="calories-input" value="${dd.cal||''}" placeholder="0"
+                oninput="day(currentDate).cal=this.value;save();updateScore()" inputmode="numeric">
+            <span class="calories-unit">kcal</span>
+        </div>
+        <div class="notes-card">
+            <label>\u{1F4DD} Notes du jour</label>
+            <textarea class="notes-textarea" placeholder="Comment s'est passee la journee ?"
+                oninput="day(currentDate).notes=this.value;save()">${dd.notes||''}</textarea>
+        </div>`;
+
+    container.innerHTML = html;
+}
+
+function toggle(id, el) {
+    const dd = day(currentDate);
+    dd.h[id] = !dd.h[id];
+    save();
+    el.classList.toggle('checked');
+    const ck = el.querySelector('.habit-check');
+    ck.textContent = dd.h[id] ? '\u2714' : '';
+    if (dd.h[id]) { ck.classList.add('pop'); setTimeout(() => ck.classList.remove('pop'), 250); }
+    updateScore();
+}
+
+function updateScore() {
+    const p = pct(currentDate);
+    const circ = 2 * Math.PI * 16;
+    const circle = document.getElementById('scoreCircle');
+    circle.style.strokeDashoffset = circ - (circ * p / 100);
+    circle.style.stroke = p >= 80 ? 'var(--success)' : p >= 50 ? 'var(--warning)' : p > 0 ? 'var(--danger)' : 'var(--accent)';
+    document.getElementById('scorePct').textContent = p + '%';
+    document.getElementById('scoreLabel').textContent = `${score(currentDate)} / ${TOTAL} actions`;
+}
+
+function changeDate(n) { currentDate = addDays(currentDate, n); render(); }
+function goToToday() { currentDate = todayStr(); render(); }
+
+// ===== PAGES =====
+function showPage(pg) {
+    ['checklist','history','stats'].forEach(p => {
+        document.getElementById('page-' + p).style.display = p === pg ? '' : 'none';
+    });
+    document.querySelectorAll('.nav-item').forEach((el, i) => {
+        el.classList.toggle('active', ['checklist','history','stats'][i] === pg);
+    });
+    if (pg === 'history') renderHistory();
+    if (pg === 'stats') renderStats();
+}
+
+// ===== HISTORY =====
+function renderHistory() {
+    const c = document.getElementById('historyContainer');
+    const now = new Date(); let html = '';
+    for (let m = 0; m < 3; m++) {
+        const dt = new Date(now.getFullYear(), now.getMonth() - m, 1);
+        html += renderMonth(dt);
+    }
+    html += `<div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(239,83,80,0.3)"></div>&lt;30%</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(255,167,38,0.3)"></div>30-50%</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(255,167,38,0.5)"></div>50-70%</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(102,187,106,0.4)"></div>70-90%</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(102,187,106,0.7)"></div>&gt;90%</div>
+    </div>`;
+    c.innerHTML = html;
+}
+
+function renderMonth(dt) {
+    const y = dt.getFullYear(), m = dt.getMonth();
+    const mNames = ['Janvier','Fevrier','Mars','Avril','Mai','Juin','Juillet','Aout','Septembre','Octobre','Novembre','Decembre'];
+    const dim = new Date(y, m+1, 0).getDate();
+    const fd = (new Date(y, m, 1).getDay() + 6) % 7;
+    let html = `<div class="calendar"><div class="cal-header"><h3>${mNames[m]} ${y}</h3></div><div class="cal-grid">`;
+    ['L','M','M','J','V','S','D'].forEach(d => html += `<div class="cal-day-name">${d}</div>`);
+    for (let i = 0; i < fd; i++) html += '<div class="cal-day empty"></div>';
+    for (let d = 1; d <= dim; d++) {
+        const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const p = pct(ds), has = data[ds];
+        let sc = 's0';
+        if (has) { sc = p >= 90 ? 's5' : p >= 70 ? 's4' : p >= 50 ? 's3' : p >= 30 ? 's2' : 's1'; }
+        const td = ds === todayStr() ? ' today' : '';
+        html += `<div class="cal-day ${sc}${td}" onclick="currentDate='${ds}';showPage('checklist');render()">${d}</div>`;
+    }
+    html += '</div></div>';
+    return html;
+}
+
+// ===== STATS =====
+function renderStats() {
+    const c = document.getElementById('statsContainer');
+    const dates = Object.keys(data).sort();
+    if (!dates.length) {
+        c.innerHTML = '<div class="stat-card"><p style="text-align:center;color:var(--text-dim)">Pas encore de donnees !</p></div>';
+        return;
+    }
+
+    let totalP = 0;
+    dates.forEach(d => totalP += pct(d));
+    const avgP = Math.round(totalP / dates.length);
+
+    // Last 30 days per habit
+    const last30 = []; for (let i = 0; i < 30; i++) last30.push(addDays(todayStr(), -i));
+    const withData = last30.filter(d => data[d]);
+
+    let hs = HABITS.map(h => {
+        const done = withData.filter(d => data[d].h && data[d].h[h.id]).length;
+        const p = withData.length ? Math.round(done / withData.length * 100) : 0;
+        return { ...h, pct: p };
+    }).sort((a, b) => b.pct - a.pct);
+
+    const calDays = withData.filter(d => data[d].cal && parseInt(data[d].cal) > 0);
+    const avgCal = calDays.length ? Math.round(calDays.reduce((s, d) => s + parseInt(data[d].cal), 0) / calDays.length) : 0;
+
+    let html = `<div class="stat-grid">
+        <div class="stat-card"><h3>Score moyen</h3><div class="stat-value" style="color:${avgP>=70?'var(--success)':avgP>=40?'var(--warning)':'var(--danger)'}">${avgP}%</div></div>
+        <div class="stat-card"><h3>Jours trackes</h3><div class="stat-value">${dates.length}</div></div>
+        <div class="stat-card"><h3>Calories moy.</h3><div class="stat-value">${avgCal||'-'}</div></div>
+        <div class="stat-card"><h3>Meilleur score</h3><div class="stat-value" style="color:var(--success)">${Math.max(...dates.map(d=>pct(d)))}%</div></div>
+    </div><div class="stat-card"><h3>\u{1F4CA} Taux de reussite (30 jours)</h3>`;
+
+    hs.forEach(h => {
+        const col = h.pct >= 70 ? 'var(--success)' : h.pct >= 40 ? 'var(--warning)' : 'var(--danger)';
+        html += `<div class="habit-stat">
+            <span>${h.emoji} ${h.text}</span>
+            <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-weight:700;color:${col}">${h.pct}%</span>
+                <div class="habit-stat-bar"><div class="habit-stat-fill" style="width:${h.pct}%;background:${col}"></div></div>
+            </div>
+        </div>`;
+    });
+    html += '</div>';
+    c.innerHTML = html;
+}
+
+// ===== NOTIFICATIONS =====
+function setupNotifs() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+        document.addEventListener('click', () => Notification.requestPermission(), { once: true });
+    }
+    setInterval(() => {
+        if (Notification.permission !== 'granted') return;
+        const now = new Date(), h = now.getHours(), m = now.getMinutes();
+        const key = `ntf_${todayStr()}_${h}`;
+        if ((h===9||h===13||h===23) && m===0 && !localStorage.getItem(key)) {
+            localStorage.setItem(key, '1');
+            const p = pct(todayStr());
+            let body = h===23 ? `Score : ${p}%. Remplis ton suivi avant de dormir !`
+                : h===9 ? `Score hier : ${pct(addDays(todayStr(),-1))}%. Bonne journee !`
+                : `Mi-journee ! Score : ${p}%. Continue !`;
+            new Notification('\u{1F3AF} Suivi Sante', { body, icon: 'icon-192.png' });
+        }
+    }, 60000);
+}
+
+// ===== PWA INSTALL =====
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault(); deferredPrompt = e;
+    if (!localStorage.getItem('inst_off')) document.getElementById('installPrompt').classList.add('show');
+});
+document.getElementById('installBtn').addEventListener('click', async () => {
+    if (deferredPrompt) { deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; }
+    document.getElementById('installPrompt').classList.remove('show');
+});
+function dismissInstall() {
+    document.getElementById('installPrompt').classList.remove('show');
+    localStorage.setItem('inst_off', '1');
+}
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+render();
+setupNotifs();
+</script>
+</body>
+</html>
