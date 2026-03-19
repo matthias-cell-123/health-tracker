@@ -266,7 +266,6 @@ const HABITS = [
     { id: 'cereals',        emoji: '\u{1F33E}', text: 'Cereales completes / legumineuses',     cat: 'Nutrition' },
     { id: 'fish',           emoji: '\u{1F41F}', text: 'Repas poisson gras',                    cat: 'Nutrition' },
     { id: 'water',          emoji: '\u{1F4A7}', text: 'Eau en priorite (pas de sodas)',        cat: 'Nutrition' },
-    { id: 'psyllium',       emoji: '\u{1F95B}', text: 'Psyllium avant dejeuner',               cat: 'Nutrition' },
     { id: 'walk_lunch',     emoji: '\u{1F6B6}', text: 'Marche apres dejeuner (30 min)',        cat: 'Activite' },
     { id: 'walk_dinner',    emoji: '\u{1F30C}', text: 'Marche apres diner (10 min)',           cat: 'Activite' },
     { id: 'mini_circuit',   emoji: '\u{1F4AA}', text: 'Mini-circuit renforcement',             cat: 'Activite' },
@@ -275,10 +274,16 @@ const HABITS = [
     { id: 'dim_lights',     emoji: '\u{1F311}', text: 'Tamiser lumieres & couper ecrans le soir', cat: 'Sommeil' },
     { id: 'sleep',          emoji: '\u{1F634}', text: 'Sommeil 7-8h',                          cat: 'Sommeil' },
     { id: 'breathing',      emoji: '\u{1F9D8}', text: 'Respiration abdominale (midi & soir)',  cat: 'Mental' },
+    { id: 'psyllium',       emoji: '\u{1F95B}', text: 'Psyllium avant dejeuner',               cat: 'Supplements' },
     { id: 'd3k2',           emoji: '\u{1F48A}', text: 'D3-K2 au diner',                       cat: 'Supplements' },
+    { id: 'yazio_breakfast', emoji: '\u{1F373}', text: 'Yazio : Petit-dejeuner',               cat: 'Tracking' },
+    { id: 'yazio_lunch',    emoji: '\u{1F35D}', text: 'Yazio : Dejeuner',                      cat: 'Tracking' },
+    { id: 'yazio_snack',    emoji: '\u{1F34E}', text: 'Yazio : Gouter',                        cat: 'Tracking' },
+    { id: 'yazio_dinner',   emoji: '\u{1F37D}\uFE0F', text: 'Yazio : Diner',                        cat: 'Tracking' },
+    { id: 'fasting_14_10',  emoji: '\u23F0',    text: 'Jeune 14-10 respecte',                  cat: 'Tracking' },
 ];
 
-const TOTAL = HABITS.length + 1; // +1 for calories
+const TOTAL = HABITS.length; // all items are checkboxes
 
 // ===== STATE =====
 let currentDate = todayStr();
@@ -317,7 +322,6 @@ function score(s) {
     const d = day(s);
     let c = 0;
     HABITS.forEach(h => { if (d.h[h.id]) c++; });
-    if (d.cal && parseInt(d.cal) > 0) c++;
     return c;
 }
 
@@ -354,7 +358,7 @@ function renderHabits() {
     const container = document.getElementById('habitsList');
     const dd = day(currentDate);
     let html = '', lastCat = '';
-    const catEmoji = { 'Nutrition':'\u{1F957}', 'Activite':'\u{1F3C3}', 'Environnement':'\u{1F33F}', 'Sommeil':'\u{1F319}', 'Mental':'\u{1F9E0}', 'Supplements':'\u{1F48A}' };
+    const catEmoji = { 'Nutrition':'\u{1F957}', 'Activite':'\u{1F3C3}', 'Environnement':'\u{1F33F}', 'Sommeil':'\u{1F319}', 'Mental':'\u{1F9E0}', 'Supplements':'\u{1F48A}', 'Tracking':'\u{1F4CB}' };
 
     HABITS.forEach(h => {
         if (h.cat !== lastCat) {
@@ -369,15 +373,7 @@ function renderHabits() {
         </div>`;
     });
 
-    html += `<div class="category-label">\u{1F4CA} Tracking</div>
-        <div class="calories-card">
-            <span class="habit-emoji">\u{1F525}</span>
-            <span class="habit-text">Calories</span>
-            <input type="number" class="calories-input" value="${dd.cal||''}" placeholder="0"
-                oninput="day(currentDate).cal=this.value;save();updateScore()" inputmode="numeric">
-            <span class="calories-unit">kcal</span>
-        </div>
-        <div class="notes-card">
+    html += `<div class="notes-card">
             <label>\u{1F4DD} Notes du jour</label>
             <textarea class="notes-textarea" placeholder="Comment s'est passee la journee ?"
                 oninput="day(currentDate).notes=this.value;save()">${dd.notes||''}</textarea>
@@ -483,14 +479,11 @@ function renderStats() {
         return { ...h, pct: p };
     }).sort((a, b) => b.pct - a.pct);
 
-    const calDays = withData.filter(d => data[d].cal && parseInt(data[d].cal) > 0);
-    const avgCal = calDays.length ? Math.round(calDays.reduce((s, d) => s + parseInt(data[d].cal), 0) / calDays.length) : 0;
-
     let html = `<div class="stat-grid">
         <div class="stat-card"><h3>Score moyen</h3><div class="stat-value" style="color:${avgP>=70?'var(--success)':avgP>=40?'var(--warning)':'var(--danger)'}">${avgP}%</div></div>
         <div class="stat-card"><h3>Jours trackes</h3><div class="stat-value">${dates.length}</div></div>
-        <div class="stat-card"><h3>Calories moy.</h3><div class="stat-value">${avgCal||'-'}</div></div>
         <div class="stat-card"><h3>Meilleur score</h3><div class="stat-value" style="color:var(--success)">${Math.max(...dates.map(d=>pct(d)))}%</div></div>
+        <div class="stat-card"><h3>Total habitudes</h3><div class="stat-value">${TOTAL}</div></div>
     </div><div class="stat-card"><h3>\u{1F4CA} Taux de reussite (30 jours)</h3>`;
 
     hs.forEach(h => {
