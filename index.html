@@ -504,26 +504,6 @@ function renderStats() {
     c.innerHTML = html;
 }
 
-// ===== NOTIFICATIONS =====
-function setupNotifs() {
-    if (!('Notification' in window)) return;
-    if (Notification.permission === 'default') {
-        document.addEventListener('click', () => Notification.requestPermission(), { once: true });
-    }
-    setInterval(() => {
-        if (Notification.permission !== 'granted') return;
-        const now = new Date(), h = now.getHours(), m = now.getMinutes();
-        const key = `ntf_${todayStr()}_${h}`;
-        if ((h===9||h===13||h===23) && m===0 && !localStorage.getItem(key)) {
-            localStorage.setItem(key, '1');
-            const p = pct(todayStr());
-            let body = h===23 ? `Score : ${p}%. Remplis ton suivi avant de dormir !`
-                : h===9 ? `Score hier : ${pct(addDays(todayStr(),-1))}%. Bonne journee !`
-                : `Mi-journee ! Score : ${p}%. Continue !`;
-            new Notification('\u{1F3AF} Suivi Sante', { body, icon: 'icon-192.png' });
-        }
-    }, 60000);
-}
 
 // ===== PWA INSTALL =====
 let deferredPrompt;
@@ -543,7 +523,6 @@ function dismissInstall() {
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
 render();
-setupNotifs();
 </script>
 </body>
 </html>
